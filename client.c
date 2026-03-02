@@ -8,6 +8,21 @@
 #include <netinet/ip.h>
 #include <net/ethernet.h>
 
+// Source MAC
+char* get_source_mac(struct ethhdr *eth) {
+    static char source[18];
+    sprintf(source, "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", eth->h_source[0], eth->h_source[1], eth->h_source[2], eth->h_source[3], eth->h_source[4], eth->h_source[5]);
+    return source;
+}
+
+// Destination MAC
+char* get_dest_mac(struct ethhdr *eth) {
+    static char dest[18];
+    sprintf(dest, "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", eth->h_dest[0], eth->h_dest[1], eth->h_dest[2], eth->h_dest[3], eth->h_dest[4], eth->h_dest[5]);
+    return dest;
+}
+
+
 int main()
 {
     int sock;
@@ -32,8 +47,13 @@ int main()
         }
 
         struct ethhdr *eth = (struct ethhdr *) buffer;
+        uint16_t ethertype = ntohs(eth->h_proto);
 
-        printf("Received %zd bytes | Source MAC %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", n, eth->h_source[0], eth->h_source[1], eth->h_source[2], eth->h_source[3], eth->h_source[4], eth->h_source[5]);
+         if (n < sizeof(struct ethhdr)) {
+            continue;
+        }
+
+        printf("Received %03zd bytes | Source MAC: %s  ->  Destination MAC: %s | EtherType: %04x\n", n, get_source_mac(eth), get_dest_mac(eth), ethertype);
     }
 
     
