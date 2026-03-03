@@ -46,17 +46,50 @@ int main()
             return 1;
         }
 
-        struct ethhdr *eth = (struct ethhdr *) buffer;
-        uint16_t ethertype = ntohs(eth->h_proto);
-
-         if (n < sizeof(struct ethhdr)) {
+        if (n < sizeof(struct ethhdr)) {
             continue;
         }
 
-        printf("Received %03zd bytes | Source MAC: %s  ->  Destination MAC: %s | EtherType: %04x\n", n, get_source_mac(eth), get_dest_mac(eth), ethertype);
+        struct ethhdr *eth = (struct ethhdr *) buffer;
+        uint16_t ethertype = ntohs(eth->h_proto);
+
+
+        if (ethertype == 0x0800) {
+            if (n < sizeof(struct ethhdr) + sizeof(struct iphdr)) {
+                continue;
+            }
+
+            struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ethhdr));
+
+            if (iph->version != 4) {
+                continue;
+            }
+
+            if (iph->ihl < 5) {
+                continue;
+            }
+
+            //IHL stands for words of 4 bytes, here we get the total amount of bytes for the IP
+            size_t ip_header_len = iph->ihl * 4;
+
+            if (n < sizeof(struct ethhdr) + ip_header_len) {
+                continue;
+            }
+
+            char src_ip[INET_ADDRSTRLEN];
+            char dst_ip[INET_ADDRSTRLEN];
+
+            inet_ntop(AF_INET, &(iph->saddr), src_ip, INET_ADDRSTRLEN);
+            inet_ntop(AF_INET, &(iph->daddr), dst_ip, INET_ADDRSTRLEN);
+
+            printf("\nIPV4 | Version: %u | IHL: %u | Protocol: %u | Source: %s | Destination: %s | Header Length: %zu\n", iph->version, iph->ihl, iph->protocol, src_ip, dst_ip, ip_header_len);
+        }
+
+        printf("Received %03zd bytes | Source MAC: %s  ->  Destination MAC: %s | EtherType: %04x\n\n", n, get_source_mac(eth), get_dest_mac(eth), ethertype);
+
     }
 
     
-
+    close(sock);
     return 0;
 }
