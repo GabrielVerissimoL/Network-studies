@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <net/if.h>
+#include <linux/if_tun.h>
 
 int tun_open() {
     struct ifreq ifr;
