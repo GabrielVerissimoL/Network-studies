@@ -6,6 +6,8 @@
 #include <net/if.h>
 #include <linux/if_tun.h>
 
+#define BUFSIZE 2000 //Buffer for reading TUN/TAP must be >= 1500
+
 int tun_open() {
     struct ifreq ifr;
     int fd, err;
@@ -23,18 +25,30 @@ int tun_open() {
     //Setando as flags necessárias para continuar ( | combina duas flags em uma só)
     ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 
+
     if( (err = ioctl(fd, TUNSETIFF, (void *)&ifr)) < 0 ) {
         perror("ioctl(TUNSETIFF)");
         close(fd);
         return err;
     }
 
-
-    
-    
-    
-    
-    
     return fd;
+}
 
+int main() {
+    char buffer[BUFSIZE];
+    int Nbytes = 0;
+
+    int fd = tun_open();
+
+    while (1) {
+        Nbytes = read(fd, buffer, sizeof(buffer));
+        if (Nbytes < 0) {
+            perror("read(fd)");
+        }
+
+        printf("Número de bytes lido foi de %d\n", Nbytes);
+    }
+
+    return 0;
 }
