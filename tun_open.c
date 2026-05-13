@@ -9,6 +9,7 @@
 #include <netinet/ip.h>
 #include <linux/icmp.h>
 #include <netinet/udp.h>
+#include <netinet/tcp.h>
 
 #define BUFSIZE 2000 //Buffer for reading TUN/TAP must be >= 1500
 
@@ -128,7 +129,37 @@ int main() {
         }
 
         if(iph->protocol == IPPROTO_TCP) {
+            //list of blocked words
+            char *Blocked_Words[] = {"Calculo", "DM"};
 
+            if(Nbytes < ip_header_len + sizeof(struct tcphdr))
+                continue;
+
+            //putting the pointer at the start of the TCP Header
+            struct tcphdr *tcph = (struct tcphdr *) (buffer + ip_header_len);
+
+            //doff have the number of words that contains the tcpheader
+            size_t tcp_header_len = tcph->doff * 4;
+
+            //Pointer to the star of the TCP Payload
+            char *TCP_PAYLOAD = (buffer + ip_header_len + tcp_header_len);
+
+            //Filter for blocked words
+            char *resultado;
+            int blocked_TCP = 0; //flag para palavra proibida
+            int total = sizeof(Blocked_Words) / sizeof(Blocked_Words[0]);
+            for (int i = 0; i < total; i++) {
+                resultado = strstr(TCP_PAYLOAD, Blocked_Words[i]);
+                if (resultado != NULL) {
+                    blocked_TCP = 1;
+                    break;
+                }
+            }
+
+            if (blocked_TCP) {
+                printf("❗Blocked Word Found\n");
+                continue;
+            }
         }
 
         //UDP header is fixed at 8 bytes!
@@ -143,18 +174,19 @@ int main() {
             //Pointer to the start of the UDP payload 
             char *UDP_Payload_str = buffer + ip_header_len + sizeof(struct udphdr); 
 
+            //Filter for blocked words
             char *resultado;
-            int blocked = 0; //flag para palavra proibida
+            int blocked_UDP = 0; //flag para palavra proibida
             int total = sizeof(Blocked_Words) / sizeof(Blocked_Words[0]);
             for (int i = 0; i < total; i++) {
                 resultado = strstr(UDP_Payload_str, Blocked_Words[i]);
                 if (resultado != NULL) {
-                    blocked = 1;
+                    blocked_UDP = 1;
                     break;
                 }
             }
 
-            if (blocked) {
+            if (blocked_UDP) {
                 printf("❗Blocked Word Found\n");
                 continue;
             }
